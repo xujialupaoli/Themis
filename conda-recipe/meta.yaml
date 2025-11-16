@@ -1,0 +1,95 @@
+{% set name = "themis" %}
+{% set version = "0.1.0" %}
+
+package:
+  name: "{{ name|lower }}"
+  version: "{{ version }}"
+
+source:
+  # 我们本地源码：themis 顶层目录（包含 themis/、themis_scripts/、thirdparty/ 等）
+  path: ..
+
+build:
+  number: 10            # 每次改配方就 +1，避免旧缓存
+  # 这里不要再写 script:，有 build.sh 就会自动跑它
+
+requirements:
+  build:
+    - {{ compiler('cxx') }}
+    - {{ compiler('c') }}
+    - cmake >=3.18
+    - ninja
+    - make
+    - rust >=1.72
+    - cargo-bundle-licenses
+  host:
+    - python {{ python }}
+    - pip
+    - setuptools >=68
+    # C++ 依赖（仅构建期）
+    - seqan3 ==3.3.0
+    - cxxopts >=2.2.0
+    - catch2 ==2.*
+    - zlib
+    - bzip2
+    - raptor ==3.*
+    # ganon 的 Python 依赖（构建/安装 python 包）
+    - pandas >=1.2.0
+    - multitax >=1.3.1
+    - genome_updater >=0.6.4
+    - grep
+    - coreutils
+    - curl
+    - diffutils
+  run:
+    - python
+    - pandas >=1.2.0
+    - multitax >=1.3.1
+    - genome_updater >=0.6.4
+    - grep
+    - coreutils
+    - curl
+    - diffutils
+    - zlib
+    - bzip2
+    - raptor ==3.*
+    - fastp
+
+test:
+  requires:
+    - python
+  # 用 script: 写多行测试（避免把 heredoc 塞进 commands）
+  script: |
+    set -euo pipefail
+    echo "[test] show top-level CLI"
+    themis -h
+
+    echo "[test] subcommand helps"
+    themis build-custom -h || true
+    themis profile -h
+
+    echo "[test] low-level CLIs exist"
+    ganon -h
+    ganon-build -h
+    ganon-classify -h
+    ganon-report -h
+    ggcat --help
+
+    echo "[test] ganon python import"
+    python - <<'PY'
+    import shutil, importlib
+    assert shutil.which("ganon"), "ganon CLI not on PATH"
+    assert shutil.which("ggcat"), "ggcat not on PATH"
+    m = importlib.import_module("ganon")
+    print("ganon module:", m.__file__)
+    PY
+
+about:
+  home: https://github.com/<your-org>/themis
+  summary: "Themis: integrated metagenomic profiling with bundled ganon (C++ & Python) and ggcat (Rust)"
+  license: GPL-3.0
+  license_family: GPL3
+
+extra:
+  final: true
+  copy_test_source_files: true

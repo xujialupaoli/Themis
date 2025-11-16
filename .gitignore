@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.build/
+dist/
+.eggs/
+
+# Conda build/cache
+conda-bld/
+*/work/
+*/work_moved_*/
+*.conda
+*.tar.bz2
+
+# CMake / Ninja / Make
+build/
+build_*/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.ninja
+*.o
+*.a
+*.so
+
+# Rust / Cargo
+target/
+Cargo.lock
+**/*.rs.bk
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Data / logs (按需调整)
+*.log
+*.tre
+*.rep
+*.tsv
+*.txt
+reads/
+database/
+output/

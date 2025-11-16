@@ -1,20 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Themis profiling pipeline (paired/single).
 
-双端：
-  ganon classify/report → 物种/菌株表 → 生成 color_mapping.in →
-  ggcat build → fastp 合并 R1/R2 → ggcat query →
-  阈值过滤 + length-corrected abundance →
-  与 ganon 结果自适应混合（需 predict_spy.ID.abundance 为两列：ID\tabundance）→ 输出 species_abundance.txt
-
-单端：
-  ganon classify/report → 物种/菌株表 → 生成 color_mapping.in →
-  ggcat build → ggcat query（单端）→
-  阈值过滤 + length-corrected abundance（不与 ganon 混合）→ 输出 species_abundance.txt
-"""
 
 import subprocess
 from pathlib import Path
@@ -26,12 +13,12 @@ import importlib
 from .utils import ensure_dir
 from . import ganon_wrapper, ggcat_wrapper
 
-# 延迟导入 themis_scripts 子模块（避免构建/测试阶段提前触发 pandas 等重依赖）
+
 def _ts(mod: str):
     return importlib.import_module(f"themis_scripts.{mod}")
 
 # =========================
-# 对外主入口
+
 # =========================
 
 def run(
@@ -44,21 +31,7 @@ def run(
     threads=8,
     k=31,
 ):
-    """
-    Themis profile 主入口
-
-    参数
-    ----
-    reads:
-      - paired: [R1, R2]
-      - single: [R]
-    single: 是否单端（True=单端；False=双端）
-    db_prefix: ganon 数据库前缀
-    out_prefix: 输出目录前缀，例如 results/sample1
-    file_info: Ref 信息表（RefDB_xxx_genomes_info.txt），用于物种-菌株→FASTA 路径映射
-    threads: 线程数（传递给 ganon/ggcat/fastp）
-    k: ggcat 的 k-mer 长度
-    """
+    
     out_prefix = Path(out_prefix).absolute()
     ensure_dir(out_prefix)
 
@@ -115,7 +88,7 @@ def run_paired(reads, db_prefix, out_prefix,
         report_type=report_type,
     )
 
-    # 2) ganon report + species_abundance + strain_abundance (+ predict_spy.ID.abundance 两列)
+    # 2) ganon report + species_abundance + strain_abundance (+ predict_spy.ID.abundance )
     ganon_tre = work_ganon / "tax_profile.tre"
     ganon_species = work_ganon / "species_abundance.txt"
     ganon_strain = work_ganon / "strain_abundance.txt"
@@ -127,10 +100,10 @@ def run_paired(reads, db_prefix, out_prefix,
         tre_out=str(ganon_tre),
         species_out=str(ganon_species),
         strain_out=str(ganon_strain),
-        predict_spy_out=str(ganon_predict_spy),  # 必须是两列：ID\tabundance
+        predict_spy_out=str(ganon_predict_spy),  # ID\tabundance
     )
 
-    # 3) 基于 species 行数选择 topk 或普通筛选，生成 tmp_id_table.tsv
+    # 3) tmp_id_table.tsv
     line_count = _count_non_empty_lines(str(ganon_species))
     tmp_id_table = work_q / "tmp_id_table.tsv"
 
@@ -170,7 +143,7 @@ def run_paired(reads, db_prefix, out_prefix,
         output=str(ggcat_db),
     )
 
-    # 6) fastp 合并双端 reads → ggcat 用的单 fastq
+    # 6) fastp 
     ggcat_reads = work_q / "reads_for_ggcat.fastq"
     _prepare_ggcat_reads_paired(r1, r2, str(ggcat_reads), threads=threads)
 
@@ -185,7 +158,7 @@ def run_paired(reads, db_prefix, out_prefix,
         single=False,
     )
 
-    # 8) 阈值 + length-corrected abundance + 与 ganon 自适应混合
+    # 8) threshold + length-corrected abundance + mix
     final_abundance = out_prefix / "species_abundance.txt"
     _run_threshold_and_mix_for_paired(
         ggcat_prefix=str(ggcat_prefix),
@@ -195,12 +168,16 @@ def run_paired(reads, db_prefix, out_prefix,
         reads_path=str(ggcat_reads),
         output=str(final_abundance),
     )
+    # 9) 
+    shutil.rmtree(work_ganon)
+    shutil.rmtree(work_db) 
+    shutil.rmtree(work_q)
 
     print(f"[Themis] Paired-end profiling done → {final_abundance}")
     return str(final_abundance)
 
 # =========================
-# 单端流程（不与 ganon 混合）
+
 # =========================
 
 def run_single(reads, db_prefix, out_prefix,
@@ -268,7 +245,7 @@ def run_single(reads, db_prefix, out_prefix,
         output=str(ggcat_db),
     )
 
-    # 6) ggcat query（单端直接用原始 read）
+    # 6) ggcat query（raw read）
     ggcat_prefix = work_q / "query_ggcatDB"
     ggcat_wrapper.run_query(
         db=str(ggcat_db),
@@ -279,7 +256,7 @@ def run_single(reads, db_prefix, out_prefix,
         single=True,
     )
 
-    # 7) 阈值 + length-corrected abundance（不与 ganon 混合）
+    # 7) threshold + length-corrected abundance（no mix）
     final_abundance = out_prefix / "species_abundance.txt"
     _run_threshold_and_lc_for_single(
         ggcat_prefix=str(ggcat_prefix),
@@ -287,12 +264,17 @@ def run_single(reads, db_prefix, out_prefix,
         reads_path=read,
         output=str(final_abundance),
     )
+    # 9) 
+
+    shutil.rmtree(work_ganon)
+    shutil.rmtree(work_db) 
+    shutil.rmtree(work_q)
 
     print(f"[Themis] Single-end profiling done → {final_abundance}")
     return str(final_abundance)
 
 # =========================
-# 工具函数 & 阈值/混合
+
 # =========================
 
 def _count_non_empty_lines(path):
@@ -304,10 +286,7 @@ def _count_non_empty_lines(path):
     return c
 
 def _prepare_ggcat_reads_paired(r1, r2, out_fastq, threads=8):
-    """
-    使用 fastp 将双端 reads 合并为一个 fastq，供 ggcat 使用。
-    fastp 通过 conda 依赖提供，需在 PATH 中。
-    """
+    
     cmd = [
         "fastp",
         "-i", r1,
@@ -329,10 +308,7 @@ def _prepare_ggcat_reads_paired(r1, r2, out_fastq, threads=8):
             )
 
 def _make_color_mapping_from_mapping_tsv(mapping_tsv, out_path):
-    """
-    输入:  TSV（含列：species_taxid, strain_taxid, new_strain_taxid, id）
-    输出:  color_mapping.in （两列：new_strain_taxid\tfasta_path）
-    """
+    
     with open(mapping_tsv, "r", encoding="utf-8") as fin, \
          open(out_path, "w", encoding="utf-8") as fout:
         header = next(fin, None)
@@ -355,10 +331,7 @@ def _run_threshold_and_mix_for_paired(
     reads_path,
     output,
 ):
-    """
-    双端：threshold + length-corrected DBG abundance + DBG/Ganon 自适应混合。
-    需要 ganon_predict_spy 为两列：ID \t abundance
-    """
+    
     species_counts = f"{ggcat_prefix}.species_counts.tsv"
 
     # 1) remains & species
@@ -390,7 +363,7 @@ def _run_threshold_and_mix_for_paired(
     expr = (remains / 1_000_000.0) * (ratio ** 2) * (remains / species)
     threshold = math.sqrt(expr) if expr > 0 else 0.0
 
-    # 3) 过滤 > threshold
+    # 3) filter > threshold
     filtered_counts = f"{ggcat_prefix}.species_counts_more{threshold:.6g}.tsv"
     with open(species_counts, "r", encoding="utf-8", errors="ignore") as fin, \
          open(filtered_counts, "w", encoding="utf-8") as fout:
@@ -415,7 +388,7 @@ def _run_threshold_and_mix_for_paired(
         output_file=abund_more,
     )
 
-    # 5) DBG 两列：id \t abundance
+    # 5) DBG ：id \t abundance
     dbg_tmp = f"{abund_more}.tmp"
     with open(abund_more, "r", encoding="utf-8", errors="ignore") as fin, \
          open(dbg_tmp, "w", encoding="utf-8") as fout:
@@ -428,7 +401,7 @@ def _run_threshold_and_mix_for_paired(
                 continue
             fout.write(f"{parts[0]}\t{parts[5]}\n")
 
-    # 6) 初次混合（w=0）：看 Ganon 结构
+    # 6) 
     raw_mix = f"{ggcat_prefix}.raw_filtered_abundance_prediction.tsv"
     _ts("mix_predictions").run(
         dbg_file=dbg_tmp,
@@ -437,7 +410,7 @@ def _run_threshold_and_mix_for_paired(
         output=raw_mix,
     )
 
-    # 7) 计算 top-2 差值
+    # 7)  top-2 
     def top2_diff(path):
         vals = []
         with open(path, "r", encoding="utf-8") as f:
@@ -463,7 +436,7 @@ def _run_threshold_and_mix_for_paired(
     diffGANON = top2_diff(raw_mix)
     i = diffDBG - diffGANON
 
-    # 8) TRE 权重（unclassified 百分比 / 5；裁剪到 [0,1]）
+    # 8) TRE 
     def tre_weight_calc(tre_file):
         w = 0.0
         found = False
@@ -489,7 +462,7 @@ def _run_threshold_and_mix_for_paired(
 
     tre_w = tre_weight_calc(tre_file)
 
-    # 9) 最终权重规则
+    # 9) 
     if i > 0.2:
         weight = tre_w
     elif 0.02 < i <= 0.2:
@@ -499,7 +472,7 @@ def _run_threshold_and_mix_for_paired(
     else:
         weight = 1.0
 
-    # 10) 最终混合
+    # 10) 
     final_tmp = f"{ggcat_prefix}.mix_abundance_prediction.tsv"
     _ts("mix_predictions").run(
         dbg_file=dbg_tmp,
@@ -521,14 +494,7 @@ def _run_threshold_and_lc_for_single(
     reads_path,
     output,
 ):
-    """
-    单端流程：
-      1) 从 ggcat 的 species_counts.tsv 计算阈值并过滤；
-      2) 用映射表（tmp_id_table：含 species_taxid 与多个 strain fasta 路径）
-         调用 length_corrected_abundance.run() 进行长度校正并归一化；
-      3) 输出最终的 species_abundance.txt。
-      注：单端不进行 DBG/Ganon 混合。
-    """
+    
     species_counts = f"{ggcat_prefix}.species_counts.tsv"
 
     remains = 0.0
@@ -583,7 +549,7 @@ def _run_threshold_and_lc_for_single(
 
     pairs = []
     with open(abund_more, "r", encoding="utf-8", errors="ignore") as fin:
-        _ = fin.readline()  # 跳过表头
+        _ = fin.readline()  
         for line in fin:
             if not line.strip():
                 continue
@@ -597,7 +563,7 @@ def _run_threshold_and_lc_for_single(
                 if sid:
                     pairs.append((sid, rel))
 
-    pairs.sort(key=lambda x: x[1], reverse=True)  # 如不想排序可删除
+    pairs.sort(key=lambda x: x[1], reverse=True)  
 
     with open(output, "w", encoding="utf-8") as fout:
         fout.write("speciesID\tabundance\n")
@@ -605,7 +571,7 @@ def _run_threshold_and_lc_for_single(
             fout.write(f"{sid}\t{rel}\n")
 
 # =========================
-# CLI 封装
+
 # =========================
 
 def cli():

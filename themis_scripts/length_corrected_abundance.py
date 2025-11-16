@@ -1,32 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Themis helper: compute length-corrected relative abundance per species.
 
-This is adapted from your original length_corrected_abundance.py, but:
-- 提供 run() 接口，方便在 Themis pipeline 内部调用；
-- 保留命令行使用方式，行为不变。
-
-功能:
-  输入:
-    1) counts.tsv (无表头): 两列
-         species_id<TAB>reads_count
-    2) mapping.tsv (有表头): 至少包含:
-         - species_taxid (或自定义列名)
-         - id           (strain genome FASTA 路径, .gz 或普通文件)
-
-  方法:
-    - 根据 counts.tsv 累加每个物种的 reads 数
-    - 在 mapping.tsv 中找到该物种对应的所有基因组路径
-    - 计算每个基因组的总碱基数, 取平均作为该物种代表长度
-    - w_i = reads_i / avg_len_i
-    - rel_i = w_i / sum_j w_j
-
-  输出:
-    带表头 TSV:
-      species_taxid  reads  n_strains  avg_genome_len  reads_over_len  rel_abundance
-"""
 
 import argparse
 import gzip
@@ -36,7 +11,7 @@ from collections import defaultdict
 
 
 # ======================
-# 内部通用函数
+
 # ======================
 
 def read_counts(counts_path):
@@ -109,7 +84,7 @@ def read_mapping(mapping_path, species_col, path_col):
 
 
 # ======================
-# 核心：给 Themis 用的 run()
+
 # ======================
 
 def run(counts_file,
@@ -118,19 +93,7 @@ def run(counts_file,
         species_col="species_taxid",
         path_col="id",
         skip_missing_genomes=True):
-    """
-    在 Themis pipeline 内部调用的接口。
-
-    参数:
-      counts_file:  species_id \t reads_count (无表头)
-      mapping_file: 含物种与基因组路径信息的表，至少包含 [species_col, path_col]
-      output_file:  输出 TSV
-      species_col:  映射表中物种列名（默认 'species_taxid'）
-      path_col:     映射表中基因组路径列名（默认 'id'）
-      skip_missing_genomes:
-                    True 时缺失的基因组文件仅告警并跳过；
-                    False 行为与原脚本近似（这里仍然跳过，但不终止）
-    """
+    
 
     counts = read_counts(counts_file)
     if not counts:
@@ -143,7 +106,7 @@ def run(counts_file,
     species_avg_len = {}
     species_n = {}
 
-    # 为 counts 中出现的每个物种计算平均基因组长度
+    # 
     for sid in counts.keys():
         paths = species_to_paths.get(sid, [])
         if not paths:
@@ -159,7 +122,7 @@ def run(counts_file,
                 if skip_missing_genomes:
                     continue
                 else:
-                    continue  # 保持与你原始行为接近：这里也只是跳过
+                    continue  # 
             if p not in genome_len_cache:
                 try:
                     genome_len_cache[p] = fasta_length(p)
@@ -176,7 +139,7 @@ def run(counts_file,
         species_n[sid] = len(lens)
         species_avg_len[sid] = sum(lens) / len(lens)
 
-    # 计算权重: reads / avg_len
+    #  reads / avg_len
     weights = {}
     for sid, rc in counts.items():
         L = species_avg_len.get(sid)
@@ -188,7 +151,7 @@ def run(counts_file,
         print("[error] Sum of (reads / avg_len) is zero; nothing to normalize.", file=sys.stderr)
         raise SystemExit(2)
 
-    # 写输出
+    # 
     with open(output_file, "w", encoding="utf-8") as out:
         out.write("\t".join([
             "species_taxid",
@@ -199,7 +162,7 @@ def run(counts_file,
             "rel_abundance",
         ]) + "\n")
 
-        # 排序规则保持稳定：先有权重的，再按 ID 排
+        # 
         for sid in sorted(counts.keys(), key=lambda x: (x not in weights, x)):
             reads = counts[sid]
             n = species_n.get(sid, 0)
@@ -212,7 +175,7 @@ def run(counts_file,
 
 
 # ======================
-# 原始命令行入口 (保持向后兼容)
+# 
 # ======================
 
 def parse_args():

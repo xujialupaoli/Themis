@@ -12,7 +12,7 @@ GGCAT_BIN = os.environ.get("THEMIS_GGCAT_BIN", "ggcat")
 
 def run_build(k, threads, color_mapping, output):
     """
-    对应：
+    
       ggcat build -k K -j threads -c -d color_mapping.in -s 1 -o ggcatDB.fasta.lz4
     """
     ensure_dir(Path(output).parent)
@@ -30,7 +30,7 @@ def run_build(k, threads, color_mapping, output):
 
 def run_query(db, reads, k, threads, out_prefix, single=False):
     """
-    对应：
+    
       ggcat query --colors -k K -j threads db reads... \
         --colored-query-output-format JsonLinesWithNames -o out_prefix [--single]
     """

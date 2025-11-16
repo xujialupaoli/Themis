@@ -1,19 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-Themis ganon wrapper (strict: only use `ganon` python CLI)
 
-职责：
-  1) 只调用 `ganon classify` 与 `ganon report`（python 入口）
-  2) 生成物种/菌株丰度：
-     - 先通过 `ganon report` 得到 .tre，再解析 .tre
-     - 解析优先用 themis_scripts；否则回退内置解析
-  3) （可选）生成 predict_spy.ID.abundance（两列：ID \t abundance）
-
-要求：
-  - 环境中必须有 `ganon`（来自 `pip install ganon`），否则报错。
-"""
 
 from __future__ import annotations
 import os
@@ -22,7 +10,7 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional
 
-# ---- 公共工具 ----
+
 try:
     from .utils import run_cmd, ensure_dir
 except Exception:
@@ -33,7 +21,7 @@ except Exception:
     def ensure_dir(p: Path):
         Path(p).mkdir(parents=True, exist_ok=True)
 
-# ---- 可选加载 themis_scripts（延迟失败）----
+
 _gsp_run = None
 _gst_run = None
 try:
@@ -44,7 +32,7 @@ try:
 except Exception:
     pass
 
-GANON = os.environ.get("THEMIS_GANON_BIN", "ganon")  # 允许用 env 覆盖，默认 'ganon'
+GANON = os.environ.get("THEMIS_GANON_BIN", "ganon")  
 
 def _check_ganon_available():
     from shutil import which
@@ -73,7 +61,7 @@ def run_classify_paired(
     ensure_dir(Path(out_prefix).parent)
     cmd = [
         GANON, "classify",
-        "-d", db_prefix,                 # 与 ganon -h 完全一致
+        "-d", db_prefix,                 
         "-p", read1, read2,
         "--output-prefix", out_prefix,
         "--report-type", report_type,
@@ -89,14 +77,12 @@ def run_classify_single(
     threads: int,
     report_type: str,
 ):
-    """
-    单端： ganon classify -d DB -s READ --output-prefix OUT --report-type TYPE -t N
-    """
+    
     _check_ganon_available()
     ensure_dir(Path(out_prefix).parent)
     cmd = [
         GANON, "classify",
-        "-d", db_prefix,                 # 与 ganon -h 完全一致
+        "-d", db_prefix,                 
         "-s", read,
         "--output-prefix", out_prefix,
         "--report-type", report_type,
@@ -106,7 +92,7 @@ def run_classify_single(
     run_cmd(cmd, echo=False, silence=True)
 
 # =========================
-# report + 产物后处理
+
 # =========================
 
 def run_report_and_postprocess(
@@ -117,9 +103,7 @@ def run_report_and_postprocess(
     strain_out: str,
     predict_spy_out: Optional[str] = None,
 ):
-    """
-    必经路径：先 ganon report -> .tre，再解析 .tre
-    """
+    
     _check_ganon_available()
 
     classify_prefix = Path(classify_prefix)
@@ -152,7 +136,7 @@ def run_report_and_postprocess(
     if not Path(tre_file).exists():
         raise SystemExit(f"[Themis][error] ganon report did not create: {tre_file}")
 
-    # 2) 生成 species / strain
+    # 2)  species / strain
     _parse_to_outputs_using_tre(
         tre_file=tre_file,
         species_out=str(species_out),
@@ -160,10 +144,10 @@ def run_report_and_postprocess(
         prefer_scripts=True
     )
 
-    # 3) 可选 predict_spy
+    # 3)  predict_spy
     _maybe_write_predict_spy(species_out, predict_spy_out)
 
-# --------- 解析 .tre -> 两个输出 ---------
+# ---------  .tre ->  ---------
 
 def _parse_to_outputs_using_tre(tre_file: str, species_out: str, strain_out: str, prefer_scripts: bool = True):
     if prefer_scripts and _gsp_run is not None:
@@ -189,7 +173,7 @@ def _maybe_write_predict_spy(species_out: Path, predict_spy_out: Optional[str]):
             if len(parts) >= 2:
                 fout.write(f"{parts[0]}\t{parts[1]}\n")
 
-# --------- 内置 .tre 解析（与你先前规则一致）---------
+# ---------  .tre ---------
 
 def _parse_species_from_tre(tre_file: str, out_path: str):
     items = []

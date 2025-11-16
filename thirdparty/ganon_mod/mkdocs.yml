@@ -1,0 +1,17 @@
+site_name: ganon2
+theme: readthedocs
+nav:
+    - ganon2: index.md
+    - Quick Start: start.md
+    - Databases (ganon build): default_databases.md
+    - Custom databases (ganon build-custom): custom_databases.md
+    - Classification (ganon classify): classification.md
+    - Reports (ganon report): reports.md
+    - Table (ganon table): table.md
+    - Output files: outputfiles.md
+    - Tutorials: tutorials.md
+markdown_extensions:
+  - attr_list
+  - admonition
+  - toc:
+      permalink: ":)"

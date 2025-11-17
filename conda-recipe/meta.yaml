@@ -6,8 +6,8 @@ package:
   version: "{{ version }}"
 
 source:
-  
-  path: ..
+  - url: https://github.com/xujialupaoli/Themis/releases/download/v0.1.0/themis.tar.gz
+    sha256: bbfa592920d66bc9b12697530e5d3a43179f12f1d6c7b46d0b79f10ea6bbc92b
 
 build:
   number: 1            

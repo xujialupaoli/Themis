@@ -11,4 +11,4 @@ requires-python = ">=3.8"
 themis = "themis.cli:main"  
 
 [tool.setuptools]
-packages = ["themis", "themis_scripts"]
+include = ["themis*", "themis_scripts*"]

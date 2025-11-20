@@ -29,8 +29,8 @@
 ## Features
 
 - **Commands**
-  - `themis build-custom` to build reference databases
-  - `themis profile` profiling
+  - `themis build-custom` Build custom themis databases.
+  - `themis profile` Profile reads against custom databases.
 
 
 

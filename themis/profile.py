@@ -57,7 +57,7 @@ def run(
         )
 
 # =========================
-# 双端流程
+#
 # =========================
 
 def run_paired(reads, db_prefix, out_prefix,
@@ -130,7 +130,7 @@ def run_paired(reads, db_prefix, out_prefix,
     else:
         raise SystemExit("[Themis] Too few ganon species hits in paired-end mode.")
 
-    # 4) 生成 color_mapping.in：new_strain_taxid \t fasta_path
+    # 4)  color_mapping.in：new_strain_taxid \t fasta_path
     color_map = work_db / "color_mapping.in"
     _make_color_mapping_from_mapping_tsv(str(tmp_id_table), str(color_map))
 
@@ -392,7 +392,7 @@ def _run_threshold_and_mix_for_paired(
     dbg_tmp = f"{abund_more}.tmp"
     with open(abund_more, "r", encoding="utf-8", errors="ignore") as fin, \
          open(dbg_tmp, "w", encoding="utf-8") as fout:
-        header = fin.readline()  # 跳过表头
+        header = fin.readline()  # 
         for line in fin:
             if not line.strip():
                 continue
@@ -483,9 +483,9 @@ def _run_threshold_and_mix_for_paired(
 
     with open(final_tmp, 'r', encoding='utf-8') as fin, \
         open(output, 'w', encoding='utf-8') as fout:
-        # 写入表头
+        # 
         fout.write("speciesID\tabundance\n")
-        # 复制内容
+        # 
         shutil.copyfileobj(fin, fout)
 
 def _run_threshold_and_lc_for_single(
